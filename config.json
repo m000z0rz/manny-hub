@@ -1,0 +1,27 @@
+{
+	"port": 8201,
+	"hub": {
+		"address": "localHost"
+	},
+	"sql": {
+		"connectionOptions": {
+			"host": "localHost",
+			"user": "localUser",
+			"password": "localPass",
+			"database": "manny"
+		}
+	},
+	"services": [
+		{
+			"type": "nest",
+			"username": "m000z0rz@gmail.com",
+			"password": "pippipch33rio",
+			"deviceIdMap": {
+				"livingRoom": "02AA01AC1114096T"
+			},
+			"locationToDeviceMap": {
+				"*": "livingRoom"
+			}
+		}
+	]
+}
