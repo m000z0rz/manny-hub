@@ -83,14 +83,19 @@ function tryCall() {
 } 
 
 function lookupService(handleCommandData) {
-	console.log("lookup service with data ", handleCommandData);
+	//console.log("lookup service with data ", handleCommandData);
 	var data = handleCommandData;
-	console.log("lookup, serviceMap ", serviceMap);
+	//console.log("lookup, serviceMap ", serviceMap);
 	var serviceList = serviceMap[data.type];
-	console.log("lookup, serviceList", serviceList);
+	//console.log("lookup, serviceList", serviceList);
 	if(!serviceList) return undefined;
 
-	return serviceList[0];
+	var returnService;
+	serviceList.forEach(function(service) {
+		if(handleCommandData.room && service.nodeContext.room === handleCommandData.room) returnService = service;
+	});
+
+	return returnService || serviceList[0];
 }
 
 var serviceMap = {};
@@ -169,6 +174,50 @@ socketIOServer.sockets.on('connection', function(socket) {
 				tryCall(clientCallback, data);
 			});
 			console.log('post emit acks: ', service.socket.acks);
+		}
+	});
+
+	socket.on('serviceEvent', function(serviceEvent) {
+		console.log('on serviceEvent', serviceEvent);
+		if(serviceEvent.serviceType === 'devices-insteon' && serviceEvent.type === 'allLinkCompleted') {
+			// interesting! let's get 
+			console.log('it\'s an all link completed');
+			// add the row to the database
+			var newRow = {
+				serviceType: 'devices-insteon',
+				room: serviceEvent.data.room,
+				insteonAddress: serviceEvent.data.insteonAddress,
+				dimmable: +(serviceEvent.data.deviceCategoryId === 0x01)
+			};
+
+			sql.query('INSERT INTO devices SET ?', newRow, function(err, results) {
+				if(err) {
+					console.log('<serviceEvent> sql insert err ', err);
+					return;
+				}
+				console.log('.... inserted');
+				var rowId = results.insertId;
+				var deviceName = 'device ' + rowId;
+				sql.query('UPDATE devices SET ? WHERE deviceId = ?', [{name: deviceName}, rowId], function(err, results) {
+					if(err) {
+						console.log('<serviceEvent> sql update err ', err);
+						return;
+					}
+					console.log('... updated. serviceEvent now ', serviceEvent);
+					// row is now in! we need to update all the speech nodes so they know about the devce
+					//   also, particularly if they're the speech node for the relevant room, they'll
+					//   probably be notifying the end user about the new device
+					console.log('serviceMap[speech]:', serviceMap['speech']);
+					if(serviceMap['speech']) serviceMap['speech'].forEach(function(service) {
+
+						serviceEvent.data.deviceId = rowId;
+						serviceEvent.data.deviceName = deviceName;
+						console.log('emitting');
+						service.socket.emit('serviceEvent', serviceEvent);
+					});
+
+				});
+			});
 		}
 	});
 

@@ -1,0 +1,14 @@
+{
+	"port": 8201,
+	"hub": {
+		"address": "localHost"
+	},
+	"sql": {
+		"connectionOptions": {
+			"host": "<host>",
+			"user": "<user>",
+			"password": "<password>",
+			"database": "<database>"
+		}
+	}
+}
